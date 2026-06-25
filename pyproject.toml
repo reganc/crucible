@@ -1,0 +1,23 @@
+[project]
+name = "crucible"
+version = "0.0.1"
+description = "A severe test for trading edges — tells you if your backtest is real."
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26", "scipy>=1.11", "pandas>=2.0"]
+
+[project.optional-dependencies]
+cpcv = ["skfolio>=0.5"]          # combinatorial purged CV (import, don't build)
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+crucible = "crucible.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["crucible"]
