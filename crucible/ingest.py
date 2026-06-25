@@ -43,3 +43,37 @@ def returns_from_series(path: str, column: str | None = None) -> np.ndarray:
     # else take the last numeric column
     numeric = df.select_dtypes("number")
     return numeric.iloc[:, -1].to_numpy(dtype=float)
+
+
+def load_schwab(path: str) -> tuple[np.ndarray, np.ndarray]:
+    """Adapter for a Schwab allocator backtest export -> CRUCIBLE's generic shapes.
+
+    The export (produced by examples/gen_schwab_trials.py, which runs the Schwab
+    allocator's walk-forward backtest across a grid of BacktestConfig variants) is a
+    wide CSV of per-period returns:
+      - a leading ``date`` column (per-period; the committed fixture is monthly),
+      - a ``chosen`` column: the registered-primary strategy's per-period returns,
+      - one ``trial_<i>`` column per config variant evaluated (the multiple-testing set).
+
+    Returns ``(trials_matrix, chosen_returns)``:
+      - trials_matrix : (T x N) float array, one column per variant -> drives PBO and
+        the trial-Sharpe variance for DSR deflation.
+      - chosen_returns : (T,) float array -> the series PSR/DSR/minTRL score.
+
+    Schwab's schema is known *here* and converted to generic numpy. It does not leak
+    past this function — the verdict only ever sees a matrix and a 1-D series.
+    """
+    df = pd.read_csv(path)
+    if df.columns[0].lower() in ("date", "time", "timestamp", "index", "unnamed: 0"):
+        df = df.iloc[:, 1:]
+    trial_cols = [c for c in df.columns if c.startswith("trial_")]
+    if len(trial_cols) < 2:
+        raise ValueError(
+            f"Schwab export must have >= 2 'trial_*' columns (the variants tried); "
+            f"found {len(trial_cols)}"
+        )
+    if "chosen" not in df.columns:
+        raise ValueError("Schwab export missing required 'chosen' column")
+    trials = df[trial_cols].to_numpy(dtype=float)
+    chosen = df["chosen"].to_numpy(dtype=float)
+    return trials, chosen

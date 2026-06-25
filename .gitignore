@@ -5,3 +5,6 @@ __pycache__/
 *_trials.csv
 .venv/
 *.zip
+
+# committed real test fixtures are tracked despite the *_trials.csv rule above
+!tests/fixtures/

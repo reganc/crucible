@@ -139,9 +139,38 @@ costs commits to unwind. If multiple candidate files or schemas exist, **list th
 not pick one silently.** If the work touches a non-negotiable principle, surface that explicitly
 before proceeding.
 
-## Next (queued — see KICKOFF.md, do not start before the Step 1 checkpoint)
+## Integration source (Step 1 checkpoint, resolved)
 
-- **Task 1 — DELPHI ingestion adapter** in `ingest.py` (`load_delphi(path)` → trial matrix +
-  chosen return series), with a test that runs `assess()` end-to-end on a committed fixture.
-- **Task 2 — Regime-conditional verdict:** wrap the six-regime brain behind the `RegimeClassifier`
-  Protocol; surface `DSR_full` vs `DSR_ex_dominant_regime` so a regime-captive edge is exposed.
+The KICKOFF named DELPHI, but discovery showed DELPHI is a **Polymarket** engine with no
+regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integrates with
+**`~/apps/Schwab/`** (a systematic multi-asset ETF allocator) instead:
+
+- **Backtest export (Task 1):** `Schwab/allocator/allocator/backtest/engine.py::run_backtest`
+  → `BacktestResult.net_returns` (date-indexed per-period returns). A sweep of N
+  `BacktestConfig` variants is the multiple-testing set. `examples/gen_schwab_trials.py`
+  drives this offline over the cached price panel and writes the committed fixture
+  `tests/fixtures/schwab_export.csv`.
+- **Regime classifier (Task 2):** `Schwab/research-api/research/analysers/regime_classifier.py`
+  — the **macro six-regime** classifier (GOLDILOCKS / REFLATION / STAGFLATION / DISINFLATION /
+  LATE_CYCLE / RECESSION). Chosen over `trading-api/portfolio/regime_brain.py` because it is
+  the only one that emits a **per-period, date-indexed** label series offline (via
+  `tests/backtest_regime.py`); the market brain only knows "current regime now" and needs live
+  DB/Redis/Yahoo. Labels are **date-aligned** to the chosen returns (neither classifier consumes
+  a raw returns array).
+
+## Status
+
+- **Task 1 — Schwab ingestion adapter: DONE.** `ingest.load_schwab(path)` → `(trials_matrix,
+  chosen_returns)`; real committed fixture (27 allocator variants, 2005–2026, monthly);
+  `tests/test_ingest_schwab.py` asserts a well-formed verdict end to end. On this fixture the
+  verdict is RED — driven by **PBO ≈ 0.76 while DSR = 1.0**: the base edge survives deflation,
+  but the 27 near-identical configs are out-of-sample-indistinguishable, so *config selection*
+  is overfit. Do not "fix" the band; that divergence is the honest signal.
+- **Task 2 — Regime-conditional verdict: NEXT.** Wrap the macro classifier behind the
+  `RegimeClassifier` Protocol (date-aligned), then surface `DSR_full` vs
+  `DSR_ex_dominant_regime` so a regime-captive edge is exposed.
+
+> Generating the fixture needs Schwab's deps (`pyarrow`, `structlog`, `python-dotenv`) and the
+> Schwab allocator on `sys.path` (`SCHWAB_ALLOCATOR`, default `~/apps/Schwab/allocator`). These
+> are **not** crucible runtime deps — they're only for the one-off generator. The committed
+> fixture carries no Schwab dependency, so `pytest` stays hermetic on numpy/scipy/pandas.
