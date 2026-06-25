@@ -17,6 +17,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from crucible.regime import PrecomputedRegime
+
 
 def load_trial_matrix(path: str) -> np.ndarray:
     """Load a (T x N) matrix of per-period returns from CSV (rows=time, cols=trials)."""
@@ -77,3 +79,54 @@ def load_schwab(path: str) -> tuple[np.ndarray, np.ndarray]:
     trials = df[trial_cols].to_numpy(dtype=float)
     chosen = df["chosen"].to_numpy(dtype=float)
     return trials, chosen
+
+
+# Schwab research-api macro six-regime labels -> stable integer ids. The order traces
+# the economic cycle; the ids are arbitrary but fixed. Anything else (NO_DATA, warmup,
+# an unknown label) maps to -1 and the verdict treats it as its own regime.
+SCHWAB_MACRO_REGIMES: dict[str, int] = {
+    "GOLDILOCKS": 0,
+    "REFLATION": 1,
+    "STAGFLATION": 2,
+    "DISINFLATION": 3,
+    "LATE_CYCLE": 4,
+    "RECESSION": 5,
+}
+
+
+def load_schwab_regimes(path: str) -> pd.Series:
+    """Load a Schwab macro-regime export into a month-indexed integer regime series.
+
+    The export is what `Schwab/research-api/tests/backtest_regime.py --csv` writes:
+    a per-month CSV with at least `date` and `regime` columns, `regime` being a macro
+    label (GOLDILOCKS … RECESSION). Schwab's enum is known here and mapped to ints; it
+    does not leak past the ingest seam.
+    """
+    df = pd.read_csv(path)
+    if "regime" not in df.columns or "date" not in df.columns:
+        raise ValueError("Schwab regime export needs 'date' and 'regime' columns")
+    ids = df["regime"].astype(str).str.upper().map(lambda s: SCHWAB_MACRO_REGIMES.get(s, -1))
+    series = pd.Series(
+        ids.to_numpy(dtype=int),
+        index=pd.PeriodIndex(pd.to_datetime(df["date"]), freq="M"),
+        name="regime",
+    )
+    return series[~series.index.duplicated(keep="last")].sort_index()
+
+
+def schwab_regime_classifier(returns_export_path: str, regime_csv_path: str) -> PrecomputedRegime:
+    """Build a date-aligned RegimeClassifier for a Schwab returns export.
+
+    Joins the macro-regime series onto the per-period (monthly) dates of the returns
+    export — as-of by calendar month, forward-filling months with no fresh
+    classification — and returns a generic `PrecomputedRegime`. This is where the
+    macro-regime schema is converted to one integer label per observation and stops.
+    """
+    months = pd.PeriodIndex(
+        pd.to_datetime(pd.read_csv(returns_export_path, usecols=[0]).iloc[:, 0]), freq="M"
+    )
+    regimes = load_schwab_regimes(regime_csv_path)
+    aligned = regimes.reindex(months, method="ffill")
+    if aligned.isna().any():               # export months preceding the regime series
+        aligned = aligned.bfill()
+    return PrecomputedRegime(aligned.to_numpy(dtype=int))

@@ -38,6 +38,11 @@ def _print_verdict(v) -> None:
     if len(v.regime_sharpe) > 1:
         rs = ", ".join(f"R{r}:{s:+.2f}" for r, s in sorted(v.regime_sharpe.items()))
         print(f"  regime-conditional Sharpe    : {rs}")
+    if v.regime_deflation is not None:
+        rd = v.regime_deflation
+        print(f"  regime-conditional DSR       : full {rd.dsr_full:.3f} -> ex-dominant "
+              f"{rd.dsr_ex_dominant:.3f}  (Δ{rd.drop:+.3f}, dominant regime {rd.dominant_regime}, "
+              f"n_ex {rd.n_ex})")
     for n in v.notes:
         print(f"  ! {n}")
     print()

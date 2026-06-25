@@ -20,7 +20,35 @@ from crucible.psr import (
     min_track_record_length,
     probabilistic_sharpe_ratio,
 )
-from crucible.regime import RegimeClassifier, SingleRegime, regime_conditional_sharpe
+from crucible.regime import (
+    RegimeClassifier,
+    SingleRegime,
+    dominant_regime,
+    regime_conditional_sharpe,
+    regime_contributions,
+)
+
+# A drop this large in the Deflated Sharpe when the home regime is removed means the
+# edge is regime-captive — it largely does not survive without that regime.
+REGIME_COLLAPSE_DROP = 0.5
+
+
+@dataclass(slots=True)
+class RegimeDeflation:
+    """Does the edge survive when you remove the regime it was born in?"""
+    dominant_regime: int            # the regime carrying the most positive performance
+    dsr_full: float                 # Deflated Sharpe on the whole series
+    dsr_ex_dominant: float          # Deflated Sharpe with the dominant regime removed
+    n_ex: int                       # observations remaining after removal
+    contributions: dict[int, float]  # summed return per regime
+
+    @property
+    def drop(self) -> float:
+        return self.dsr_full - self.dsr_ex_dominant
+
+    @property
+    def regime_captive(self) -> bool:
+        return self.drop >= REGIME_COLLAPSE_DROP
 
 
 @dataclass(slots=True)
@@ -30,6 +58,7 @@ class Verdict:
     deflation: DeflationReport
     pbo: PBOReport | None
     regime_sharpe: dict[int, float] = field(default_factory=dict)
+    regime_deflation: RegimeDeflation | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -92,9 +121,29 @@ def assess(
             notes.append(f"Edge appears concentrated in regime {pos[0]} — check regime "
                          f"dependence before trusting it out of sample.")
 
+    # Regime-conditional deflation: does the edge survive without its home regime?
+    # Only when a real classifier is supplied AND more than one regime is present.
+    regime_deflation: RegimeDeflation | None = None
+    if regime is not None and len(regime_sr) > 1:
+        dom = dominant_regime(chosen_returns, labels)
+        if dom is not None:
+            ex = np.asarray(chosen_returns, dtype=float)[np.asarray(labels) != dom]
+            if ex.size >= 2:
+                mex = moments(ex)
+                dsr_ex = probabilistic_sharpe_ratio(
+                    mex["sharpe"], mex["n"], mex["skew"], mex["kurtosis"], sr_benchmark=sr0)
+                regime_deflation = RegimeDeflation(
+                    dominant_regime=dom, dsr_full=dsr, dsr_ex_dominant=dsr_ex, n_ex=mex["n"],
+                    contributions=regime_contributions(chosen_returns, labels))
+                if regime_deflation.regime_captive:
+                    notes.append(
+                        f"Edge is regime-captive: removing its home regime ({dom}) drops the "
+                        f"Deflated Sharpe {dsr:.2f} -> {dsr_ex:.2f} (Δ{regime_deflation.drop:.2f}). "
+                        f"It largely does not survive out of that regime.")
+
     band, headline = _band(deflation, pbo_report)
-    return Verdict(band=band, headline=headline, deflation=deflation,
-                   pbo=pbo_report, regime_sharpe=regime_sr, notes=notes)
+    return Verdict(band=band, headline=headline, deflation=deflation, pbo=pbo_report,
+                   regime_sharpe=regime_sr, regime_deflation=regime_deflation, notes=notes)
 
 
 def _band(d: DeflationReport, p: PBOReport | None) -> tuple[str, str]:

@@ -166,11 +166,23 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
   verdict is RED — driven by **PBO ≈ 0.76 while DSR = 1.0**: the base edge survives deflation,
   but the 27 near-identical configs are out-of-sample-indistinguishable, so *config selection*
   is overfit. Do not "fix" the band; that divergence is the honest signal.
-- **Task 2 — Regime-conditional verdict: NEXT.** Wrap the macro classifier behind the
-  `RegimeClassifier` Protocol (date-aligned), then surface `DSR_full` vs
-  `DSR_ex_dominant_regime` so a regime-captive edge is exposed.
+- **Task 2 — Regime-conditional verdict: DONE.** `regime.PrecomputedRegime` carries
+  date-aligned labels; `ingest.schwab_regime_classifier(export, regime_csv)` wraps the macro
+  six-regime classifier (maps the enum → ints, joins by month). `assess(regime=…)` reports
+  `RegimeDeflation` (DSR_full vs DSR_ex_dominant_regime) and notes a *regime-captive* edge when
+  the drop ≥ 0.5. On the real allocator + real FRED labels, the edge is **not** captive:
+  dominant regime DISINFLATION, DSR 1.000 → 0.990 (Δ0.01). So RED is purely config-overfit
+  (PBO); the underlying edge survives both deflation and regime removal. `tests/test_regime.py`
+  (synthetic captive/robust cases) + `tests/test_ingest_schwab_regime.py` (real fixtures).
 
-> Generating the fixture needs Schwab's deps (`pyarrow`, `structlog`, `python-dotenv`) and the
-> Schwab allocator on `sys.path` (`SCHWAB_ALLOCATOR`, default `~/apps/Schwab/allocator`). These
-> are **not** crucible runtime deps — they're only for the one-off generator. The committed
-> fixture carries no Schwab dependency, so `pytest` stays hermetic on numpy/scipy/pandas.
+> **Regenerating the fixtures** (one-off; not crucible runtime deps):
+> - Returns export (`tests/fixtures/schwab_export.csv`): `examples/gen_schwab_trials.py` — needs
+>   `pyarrow`, `structlog`, `python-dotenv` and the allocator on `sys.path` (`SCHWAB_ALLOCATOR`,
+>   default `~/apps/Schwab/allocator`).
+> - Macro regimes (`tests/fixtures/schwab_regimes.csv`): real monthly labels from live FRED via
+>   `Schwab/research-api/tests/backtest_regime.py --source fred --since 2004-06-01 --csv …`
+>   (needs `FRED_API_KEY`; the `~/apps/Schwab/research-api/.env` value has a trailing inline
+>   comment — strip everything after `#`, keep the 32 hex chars).
+>
+> Both committed fixtures carry **no** Schwab dependency, so `pytest` stays hermetic on
+> numpy/scipy/pandas.
