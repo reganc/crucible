@@ -6,7 +6,8 @@ N noisy tries. The job of this tool is sometimes to disappoint you.
 
 It is engine- and data-agnostic on purpose: it consumes a matrix of trial returns or a
 single strategy's return series, not a specific platform's internals. It sits *on top of*
-DELPHI / LEAN / Nautilus / VectorBT, not in competition with them.
+your backtester (LEAN / Nautilus / VectorBT / a CSV), not in competition with it. A concrete
+adapter ships for the **Schwab systematic ETF allocator** — see [Schwab integration](#schwab-integration).
 
 ## What it computes
 
@@ -16,8 +17,9 @@ DELPHI / LEAN / Nautilus / VectorBT, not in competition with them.
   pick lands below median out-of-sample.
 - **Probabilistic Sharpe (PSR)** and **minimum track record length** — is your sample
   even long enough to claim the edge?
-- **Regime-conditional Sharpe** — a seam for the six-regime brain, to catch edges that
-  live in one regime only.
+- **Regime-conditional Deflated Sharpe** — recomputes the DSR with the dominant regime's
+  observations removed and surfaces the drop, answering "does the edge survive when you
+  remove the regime it was born in?" Catches edges that live in one regime only.
 
 ## Quickstart
 
@@ -40,11 +42,45 @@ v = assess(chosen_returns, n_trials=200, trials_matrix=M)  # M is (T x N)
 print(v.band, v.headline, v.deflation.deflated_sharpe, v.pbo.pbo)
 ```
 
+## Schwab integration
+
+A concrete adapter wires CRUCIBLE to the Schwab systematic ETF allocator. The allocator's
+schema stays inside `crucible/ingest.py`; the verdict only ever sees a generic trial matrix
+and a 1-D return series.
+
+```python
+from crucible import assess
+from crucible.ingest import load_schwab, schwab_regime_classifier
+
+trials, chosen = load_schwab("tests/fixtures/schwab_export.csv")   # (T x N), (T,)
+clf = schwab_regime_classifier("tests/fixtures/schwab_export.csv",  # date-aligned
+                               "tests/fixtures/schwab_regimes.csv")
+v = assess(chosen, n_trials=trials.shape[1], trials_matrix=trials, regime=clf)
+print(v.band, v.regime_deflation.dsr_full, v.regime_deflation.dsr_ex_dominant)
+```
+
+- **`load_schwab`** reads a backtest export (one column per strategy variant tried, plus the
+  registered-primary `chosen` column) into the matrix + chosen series the verdict consumes.
+- **`schwab_regime_classifier`** wraps the allocator's macro **six-regime** classifier
+  (GOLDILOCKS / REFLATION / STAGFLATION / DISINFLATION / LATE_CYCLE / RECESSION), date-aligning
+  one integer regime per observation so `assess(regime=…)` can report the regime-conditional DSR.
+- Runnable demos on committed real fixtures: `examples/verdict_schwab.py`,
+  `examples/verdict_schwab_regime.py`. Regenerate fixtures with `examples/gen_schwab_trials.py`.
+
+**The trials must be the search you actually ran.** PBO/CSCV only means something when the
+trial columns are the *competing strategies* you chose between. The shipped sweep is 18
+structurally distinct strategies (6 sleeve mandates × 3 trend horizons) → PBO 0.11, DSR 0.999,
+**GREEN**. An earlier sweep of 27 near-identical *knob* perturbations of one book → PBO 0.76,
+**RED**: same allocator, opposite verdict, because picking the best of 27 indistinguishable
+configs is overfitting while picking among real strategies is not. The verdict is only as
+honest as the trial set.
+
 ## Build-vs-import notes
 
 - `crucible/psr.py`, `crucible/pbo.py` — built here (compact, from the Bailey /
   López de Prado papers), so the verdict engine owns them end to end.
 - `crucible/cpcv.py` — thin seam over **skfolio**'s `CombinatorialPurgedCV`
   (`pip install crucible[cpcv]`); the package still runs without it.
-- `crucible/regime.py` — seam for the six-regime classifier (stub ships single-regime).
+- `crucible/regime.py` — regime seam: `SingleRegime` (no-dependency fallback) and
+  `PrecomputedRegime` (carries date-aligned labels from the Schwab macro six-regime classifier).
 - `crucible/verdict.py` — the orchestration: the actual product.
