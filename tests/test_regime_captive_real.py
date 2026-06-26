@@ -28,6 +28,8 @@ def test_raw_cyclical_holding_is_regime_captive():
     rd = v.regime_deflation
     assert rd is not None
     assert rd.regime_captive                            # DSR drop >= 0.5 without its home regime
+    assert rd.regime_specific                           # and the drop exceeds the sample-size null
+    assert rd.sharpe_ex_dominant < rd.sharpe_full       # per-period edge genuinely collapses
     assert rd.dsr_ex_dominant < rd.dsr_full
     assert any("regime-captive" in n for n in v.notes)
 
@@ -38,3 +40,4 @@ def test_allocator_book_is_not_regime_captive():
     rd = v.regime_deflation
     assert rd is not None
     assert not rd.regime_captive
+    assert not rd.regime_specific                       # its small drop is explained by sample size

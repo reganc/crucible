@@ -43,6 +43,10 @@ def _print_verdict(v) -> None:
         print(f"  regime-conditional DSR       : full {rd.dsr_full:.3f} -> ex-dominant "
               f"{rd.dsr_ex_dominant:.3f}  (Δ{rd.drop:+.3f}, dominant regime {rd.dominant_regime}, "
               f"n_ex {rd.n_ex})")
+        tag = "regime-specific" if rd.regime_specific else "sample-size"
+        print(f"  sample-size control          : per-period Sharpe {rd.sharpe_full:+.3f} -> "
+              f"{rd.sharpe_ex_dominant:+.3f};  ex-DSR at pct {rd.regime_specific_pct:.2f} of random "
+              f"removals (mean {rd.dsr_ex_random_mean:.3f})  [{tag}]")
     for n in v.notes:
         print(f"  ! {n}")
     print()

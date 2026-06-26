@@ -51,16 +51,22 @@ the live picture. **Read it before starting new work; update it when work lands.
   macro regimes (DSR 0.999 → 0.968 ex-regime). The detector *does* fire on genuinely regime-
   dependent holdings: raw small-caps **IWM** DSR **0.867 → 0.274 (Δ0.59)**, captive note triggered;
   EEM / VGK similar. So Task 2 catches what it should and stays quiet on what it shouldn't.
-  *Caveat:* removing a regime also removes ~half the observations, so the drop blends genuine
-  regime-dependence with a shorter-track-record effect — directionally right, not a clean split.
+  (The sample-size caveat was the follow-up below.)
 
-Suite: **19 passing.** noise→RED / real→GREEN invariant intact.
+- **Sample-size-controlled regime deflation** — the ex-regime DSR drop blended regime-dependence
+  with shorter-sample effects. `RegimeDeflation` now also carries the n-independent per-period
+  Sharpe (full vs ex-dominant) and a fixed-`n` bootstrap: the DSR over equal-sized RANDOM
+  removals plus the percentile the real ex-regime DSR lands at (`regime_specific`). `regime_captive`
+  now requires the collapse to be regime-specific (left tail), not merely large — a shorter sample
+  can no longer masquerade as captivity. On real data: IWM per-period Sharpe **0.145 → 0.015**,
+  ex-DSR at the **1st** percentile of random removals → genuinely captive; the allocator's
+  0.999 → 0.968 sits at the **19th** percentile → sample-size, correctly NOT flagged.
+  `tests/test_regime.py` gains a sample-size-artifact case + a determinism check.
+
+Suite: **21 passing.** noise→RED / real→GREEN invariant intact.
 
 ## Queued
 
-- **Sample-size-controlled regime test.** The ex-regime DSR drop conflates regime-dependence
-  with reduced `n` (removing a regime drops ~half the months). A per-period-Sharpe delta or a
-  bootstrap that holds `n` fixed would isolate the pure regime effect from the track-record effect.
 - **Daily vs monthly deflation.** Fixtures are monthly (compounded) for size + macro-regime
   alignment. Switch to daily if you want the allocator's native cadence.
 
