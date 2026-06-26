@@ -46,26 +46,26 @@ print(v.band, v.headline, v.deflation.deflated_sharpe, v.pbo.pbo)
 
 A concrete adapter wires CRUCIBLE to a systematic ETF allocator. The allocator's schema stays
 inside `crucible/ingest.py`; the verdict only ever sees a generic trial matrix and a 1-D
-return series. (The adapter functions and fixtures keep their `…_schwab…` names in code.)
+return series.
 
 ```python
 from crucible import assess
-from crucible.ingest import load_schwab, schwab_regime_classifier
+from crucible.ingest import load_allocator, allocator_regime_classifier
 
-trials, chosen = load_schwab("tests/fixtures/schwab_export.csv")   # (T x N), (T,)
-clf = schwab_regime_classifier("tests/fixtures/schwab_export.csv",  # date-aligned
-                               "tests/fixtures/schwab_regimes.csv")
+trials, chosen = load_allocator("tests/fixtures/allocator_export.csv")    # (T x N), (T,)
+clf = allocator_regime_classifier(                                        # date-aligned
+    "tests/fixtures/allocator_export.csv", "tests/fixtures/allocator_regimes.csv")
 v = assess(chosen, n_trials=trials.shape[1], trials_matrix=trials, regime=clf)
 print(v.band, v.regime_deflation.dsr_full, v.regime_deflation.dsr_ex_dominant)
 ```
 
-- **`load_schwab`** reads a backtest export (one column per strategy variant tried, plus the
+- **`load_allocator`** reads a backtest export (one column per strategy variant tried, plus the
   registered-primary `chosen` column) into the matrix + chosen series the verdict consumes.
-- **`schwab_regime_classifier`** wraps the allocator's macro **six-regime** classifier
+- **`allocator_regime_classifier`** wraps the allocator's macro **six-regime** classifier
   (GOLDILOCKS / REFLATION / STAGFLATION / DISINFLATION / LATE_CYCLE / RECESSION), date-aligning
   one integer regime per observation so `assess(regime=…)` can report the regime-conditional DSR.
-- Runnable demos on committed real fixtures: `examples/verdict_schwab.py`,
-  `examples/verdict_schwab_regime.py`. Regenerate fixtures with `examples/gen_schwab_trials.py`.
+- Runnable demos on committed real fixtures: `examples/verdict_allocator.py`,
+  `examples/verdict_allocator_regime.py`. Regenerate fixtures with `examples/gen_allocator_trials.py`.
 
 **The trials must be the search you actually ran.** PBO/CSCV only means something when the
 trial columns are the *competing strategies* you chose between. The shipped sweep is 18

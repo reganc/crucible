@@ -1,6 +1,6 @@
 """Task 2 — regime-conditional deflation.
 
-Synthetic, hermetic cases (no Schwab dependency): an edge that lives entirely in one
+Synthetic, hermetic cases (no allocator dependency): an edge that lives entirely in one
 regime must show a large Deflated-Sharpe drop and trigger the regime-captive note; a
 regime-robust edge must not. Plus the gating and the generic carrier's contract.
 """

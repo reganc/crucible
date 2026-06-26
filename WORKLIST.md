@@ -13,18 +13,18 @@ the live picture. **Read it before starting new work; update it when work lands.
   with no regime classifier and no (T×N) matrix. **Pivoted to `~/apps/Schwab`** (confirmed):
   allocator backtest = the export; research-api macro **six-regime** classifier = the regime
   brain; regime labels **date-aligned** to returns. (Details in CLAUDE.md → Integration source.)
-- **Task 1 — Schwab ingestion adapter** (`823cb49`) — `ingest.load_schwab` → (T×N matrix,
-  chosen series); real fixture `tests/fixtures/schwab_export.csv` via
-  `examples/gen_schwab_trials.py`; `tests/test_ingest_schwab.py`. (Fixture later rebuilt — see
+- **Task 1 — allocator ingestion adapter** (`823cb49`) — `ingest.load_allocator` → (T×N matrix,
+  chosen series); real fixture `tests/fixtures/allocator_export.csv` via
+  `examples/gen_allocator_trials.py`; `tests/test_ingest_allocator.py`. (Fixture later rebuilt — see
   the trial-set entry below.)
 - **Task 2 — Regime-conditional deflation** (`b1aa769`) — `regime.PrecomputedRegime` +
   `verdict.RegimeDeflation` (DSR_full vs DSR_ex_dominant_regime, regime-captive note at
-  drop ≥ 0.5); `ingest.schwab_regime_classifier` wraps the macro six-regime output. Real
-  fixture `tests/fixtures/schwab_regimes.csv` (live FRED, 263 months, 85% NBER recall);
-  `tests/test_regime.py` + `tests/test_ingest_schwab_regime.py`. On the real allocator the edge
+  drop ≥ 0.5); `ingest.allocator_regime_classifier` wraps the macro six-regime output. Real
+  fixture `tests/fixtures/allocator_regimes.csv` (live FRED, 263 months, 85% NBER recall);
+  `tests/test_regime.py` + `tests/test_ingest_allocator_regime.py`. On the real allocator the edge
   is **not** regime-captive: dominant regime DISINFLATION, DSR 1.000 → 0.990.
 
-- **Trial set = structurally distinct strategies** — `examples/gen_schwab_trials.py` now sweeps
+- **Trial set = structurally distinct strategies** — `examples/gen_allocator_trials.py` now sweeps
   6 sleeve mandates (balanced / equity-tilt / defensive / all-weather / real-assets / credit-tilt)
   × 3 trend horizons (fast / medium / slow) = **18 strategies**, 258 months. Chosen = the
   registered primary (balanced / medium), which is mid-pack (defensive beats it in-sample, so

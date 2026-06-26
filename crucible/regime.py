@@ -38,7 +38,7 @@ class PrecomputedRegime:
     target return series.
 
     The Protocol's `label(returns)` takes only values, but real classifiers (the
-    Schwab macro brain) are keyed by date and don't consume a returns array. So the
+    allocator macro brain) are keyed by date and don't consume a returns array. So the
     date-join happens in the ingest seam, and its result — one integer regime per
     observation — is carried here. Engine-agnostic by construction: the verdict only
     ever sees integer labels, never the external regime schema.

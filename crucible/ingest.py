@@ -47,10 +47,10 @@ def returns_from_series(path: str, column: str | None = None) -> np.ndarray:
     return numeric.iloc[:, -1].to_numpy(dtype=float)
 
 
-def load_schwab(path: str) -> tuple[np.ndarray, np.ndarray]:
-    """Adapter for a Schwab allocator backtest export -> CRUCIBLE's generic shapes.
+def load_allocator(path: str) -> tuple[np.ndarray, np.ndarray]:
+    """Adapter for an allocator backtest export -> CRUCIBLE's generic shapes.
 
-    The export (produced by examples/gen_schwab_trials.py, which runs the Schwab
+    The export (produced by examples/gen_allocator_trials.py, which runs the
     allocator's walk-forward backtest across a grid of BacktestConfig variants) is a
     wide CSV of per-period returns:
       - a leading ``date`` column (per-period; the committed fixture is monthly),
@@ -62,7 +62,7 @@ def load_schwab(path: str) -> tuple[np.ndarray, np.ndarray]:
         the trial-Sharpe variance for DSR deflation.
       - chosen_returns : (T,) float array -> the series PSR/DSR/minTRL score.
 
-    Schwab's schema is known *here* and converted to generic numpy. It does not leak
+    The allocator's schema is known *here* and converted to generic numpy. It does not leak
     past this function — the verdict only ever sees a matrix and a 1-D series.
     """
     df = pd.read_csv(path)
@@ -71,20 +71,20 @@ def load_schwab(path: str) -> tuple[np.ndarray, np.ndarray]:
     trial_cols = [c for c in df.columns if c.startswith("trial_")]
     if len(trial_cols) < 2:
         raise ValueError(
-            f"Schwab export must have >= 2 'trial_*' columns (the variants tried); "
+            f"allocator export must have >= 2 'trial_*' columns (the variants tried); "
             f"found {len(trial_cols)}"
         )
     if "chosen" not in df.columns:
-        raise ValueError("Schwab export missing required 'chosen' column")
+        raise ValueError("allocator export missing required 'chosen' column")
     trials = df[trial_cols].to_numpy(dtype=float)
     chosen = df["chosen"].to_numpy(dtype=float)
     return trials, chosen
 
 
-# Schwab research-api macro six-regime labels -> stable integer ids. The order traces
+# allocator research-api macro six-regime labels -> stable integer ids. The order traces
 # the economic cycle; the ids are arbitrary but fixed. Anything else (NO_DATA, warmup,
 # an unknown label) maps to -1 and the verdict treats it as its own regime.
-SCHWAB_MACRO_REGIMES: dict[str, int] = {
+MACRO_REGIMES: dict[str, int] = {
     "GOLDILOCKS": 0,
     "REFLATION": 1,
     "STAGFLATION": 2,
@@ -94,18 +94,18 @@ SCHWAB_MACRO_REGIMES: dict[str, int] = {
 }
 
 
-def load_schwab_regimes(path: str) -> pd.Series:
-    """Load a Schwab macro-regime export into a month-indexed integer regime series.
+def load_allocator_regimes(path: str) -> pd.Series:
+    """Load an allocator macro-regime export into a month-indexed integer regime series.
 
     The export is what `Schwab/research-api/tests/backtest_regime.py --csv` writes:
     a per-month CSV with at least `date` and `regime` columns, `regime` being a macro
-    label (GOLDILOCKS … RECESSION). Schwab's enum is known here and mapped to ints; it
+    label (GOLDILOCKS … RECESSION). The allocator's regime enum is known here and mapped to ints; it
     does not leak past the ingest seam.
     """
     df = pd.read_csv(path)
     if "regime" not in df.columns or "date" not in df.columns:
-        raise ValueError("Schwab regime export needs 'date' and 'regime' columns")
-    ids = df["regime"].astype(str).str.upper().map(lambda s: SCHWAB_MACRO_REGIMES.get(s, -1))
+        raise ValueError("allocator regime export needs 'date' and 'regime' columns")
+    ids = df["regime"].astype(str).str.upper().map(lambda s: MACRO_REGIMES.get(s, -1))
     series = pd.Series(
         ids.to_numpy(dtype=int),
         index=pd.PeriodIndex(pd.to_datetime(df["date"]), freq="M"),
@@ -114,8 +114,8 @@ def load_schwab_regimes(path: str) -> pd.Series:
     return series[~series.index.duplicated(keep="last")].sort_index()
 
 
-def schwab_regime_classifier(returns_export_path: str, regime_csv_path: str) -> PrecomputedRegime:
-    """Build a date-aligned RegimeClassifier for a Schwab returns export.
+def allocator_regime_classifier(returns_export_path: str, regime_csv_path: str) -> PrecomputedRegime:
+    """Build a date-aligned RegimeClassifier for an allocator returns export.
 
     Joins the macro-regime series onto the per-period (monthly) dates of the returns
     export — as-of by calendar month, forward-filling months with no fresh
@@ -125,7 +125,7 @@ def schwab_regime_classifier(returns_export_path: str, regime_csv_path: str) -> 
     months = pd.PeriodIndex(
         pd.to_datetime(pd.read_csv(returns_export_path, usecols=[0]).iloc[:, 0]), freq="M"
     )
-    regimes = load_schwab_regimes(regime_csv_path)
+    regimes = load_allocator_regimes(regime_csv_path)
     aligned = regimes.reindex(months, method="ffill")
     if aligned.isna().any():               # export months preceding the regime series
         aligned = aligned.bfill()

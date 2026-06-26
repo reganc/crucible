@@ -151,8 +151,8 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
   defensive / all-weather / real-assets / credit-tilt) × trend horizon (fast / medium / slow),
   18 in all — *not* knob perturbations of one book (that made PBO measure tie-break noise; see
   the trial-set note in WORKLIST.md). The chosen is the registered primary (balanced / medium).
-  `examples/gen_schwab_trials.py` drives this offline over the cached price panel and writes the
-  committed fixture `tests/fixtures/schwab_export.csv`.
+  `examples/gen_allocator_trials.py` drives this offline over the cached price panel and writes the
+  committed fixture `tests/fixtures/allocator_export.csv`.
 - **Regime classifier (Task 2):** `Schwab/research-api/research/analysers/regime_classifier.py`
   — the **macro six-regime** classifier (GOLDILOCKS / REFLATION / STAGFLATION / DISINFLATION /
   LATE_CYCLE / RECESSION). Chosen over `trading-api/portfolio/regime_brain.py` because it is
@@ -166,18 +166,18 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
 Tactical status — what's done, in flight, queued, and parked — lives in **`WORKLIST.md`**.
 Read it before starting new work; update it when work lands. CLAUDE.md is stable conventions
 and load-bearing decisions; WORKLIST.md is the moving picture. (Tasks 1 and 2 are landed. The
-band on the real Schwab fixture is **trial-set-dependent**: 18 diverse strategies → GREEN
+band on the real allocator fixture is **trial-set-dependent**: 18 diverse strategies → GREEN
 (PBO 0.11, DSR 0.999); the earlier knob-only sweep → RED (PBO 0.76). Both are honest answers to
 different questions — that sensitivity is the point, not a bug to "fix.")
 
 > **Regenerating the fixtures** (one-off; not crucible runtime deps):
-> - Returns export (`tests/fixtures/schwab_export.csv`): `examples/gen_schwab_trials.py` — needs
->   `pyarrow`, `structlog`, `python-dotenv` and the allocator on `sys.path` (`SCHWAB_ALLOCATOR`,
+> - Returns export (`tests/fixtures/allocator_export.csv`): `examples/gen_allocator_trials.py` — needs
+>   `pyarrow`, `structlog`, `python-dotenv` and the allocator on `sys.path` (`ALLOCATOR_SRC`,
 >   default `~/apps/Schwab/allocator`).
-> - Macro regimes (`tests/fixtures/schwab_regimes.csv`): real monthly labels from live FRED via
+> - Macro regimes (`tests/fixtures/allocator_regimes.csv`): real monthly labels from live FRED via
 >   `Schwab/research-api/tests/backtest_regime.py --source fred --since 2004-06-01 --csv …`
 >   (needs `FRED_API_KEY`; the `~/apps/Schwab/research-api/.env` value has a trailing inline
 >   comment — strip everything after `#`, keep the 32 hex chars).
 >
-> Both committed fixtures carry **no** Schwab dependency, so `pytest` stays hermetic on
+> Both committed fixtures carry **no** allocator dependency, so `pytest` stays hermetic on
 > numpy/scipy/pandas.

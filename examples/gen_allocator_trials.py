@@ -1,4 +1,4 @@
-"""Generate a real Schwab-allocator trial export for CRUCIBLE's ingest adapter.
+"""Generate a real allocator trial export for CRUCIBLE's ingest adapter.
 
 The honest multiple-testing question PBO answers is "if I pick the best of the
 strategies I TRIED, does it hold up out of sample?" So the trials must be
@@ -7,7 +7,7 @@ momentum horizons — not knob perturbations of one book (vol_window / band /
 rebalance), whose returns cluster so tightly that PBO only ever measures
 knob-tuning noise.
 
-This runs the Schwab allocator backtest (`allocator.backtest.engine.run_backtest`)
+This runs the allocator backtest (`allocator.backtest.engine.run_backtest`)
 over the cross of:
   - sleeve mandate (`sleeve_caps`): how much each asset-class sleeve may hold —
     balanced / equity-tilt / defensive / all-weather / real-assets / credit-tilt,
@@ -16,12 +16,12 @@ and writes a wide CSV of per-period (monthly) net returns: one column per strate
 plus the registered-primary `chosen` column (balanced mandate, medium horizon —
 matching `allocator.scripts.run_backtest`).
 
-DEV TOOL, not part of the `crucible` package: it imports Schwab. The committed
-artifact (`tests/fixtures/schwab_export.csv`) is generic CSV with no Schwab
+DEV TOOL, not part of the `crucible` package: it imports the allocator. The committed
+artifact (`tests/fixtures/allocator_export.csv`) is generic CSV with no allocator
 dependency, so the test suite stays hermetic.
 
-    SCHWAB_ALLOCATOR=/home/regan/apps/Schwab/allocator \
-        python examples/gen_schwab_trials.py
+    ALLOCATOR_SRC=/home/regan/apps/Schwab/allocator \
+        python examples/gen_allocator_trials.py
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from pathlib import Path
 
 import pandas as pd
 
-ALLOC = os.environ.get("SCHWAB_ALLOCATOR", "/home/regan/apps/Schwab/allocator")
+ALLOC = os.environ.get("ALLOCATOR_SRC", "/home/regan/apps/Schwab/allocator")
 sys.path.insert(0, ALLOC)
 
 from allocator.backtest.engine import BacktestConfig, run_backtest  # noqa: E402
@@ -40,7 +40,7 @@ from allocator.config import settings  # noqa: E402
 from allocator.data.store import load_panel  # noqa: E402
 from allocator.universe import Sleeve, all_tickers, by_ticker  # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "schwab_export.csv"
+OUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "allocator_export.csv"
 
 # ── Sleeve mandates: max weight per asset-class sleeve (cash absorbs the residual,
 # so CASH stays 1.0). Each is a genuinely different strategic book. "balanced" is the
