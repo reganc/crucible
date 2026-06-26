@@ -38,15 +38,31 @@ the live picture. **Read it before starting new work; update it when work lands.
   PBO is only as meaningful as the trial set faithfully represents the search you actually ran.
   Honest read on the allocator: don't trust knob-tuning, but the chosen mandate is defensible.
 
-Suite: **17 passing.** noise→RED / real→GREEN invariant intact.
+- **Public-facing polish** (`801b2bf`, `4532443`, `748c7f8`) — README documents the allocator
+  integration; the brokerage name is removed repo-wide (API / filenames / prose now use generic
+  `allocator` / `load_allocator` / `allocator_regime_classifier` …). Only the real
+  `~/apps/Schwab/...` paths needed to regenerate fixtures remain.
 
-## Queued — open questions raised at task checkpoints (need a call before building)
+- **Regime-captive detector validated on real data** — added a contrasting real fixture
+  (`tests/fixtures/cyclicals_export.csv`, raw cyclical ETF holdings) via
+  `examples/gen_cyclicals_export.py`, plus `examples/verdict_regime_captive.py` and
+  `tests/test_regime_captive_real.py`. **Finding:** no allocator-engine book is regime-captive —
+  vol-targeting + the market regime overlay make every book broadly positive across all six
+  macro regimes (DSR 0.999 → 0.968 ex-regime). The detector *does* fire on genuinely regime-
+  dependent holdings: raw small-caps **IWM** DSR **0.867 → 0.274 (Δ0.59)**, captive note triggered;
+  EEM / VGK similar. So Task 2 catches what it should and stays quiet on what it shouldn't.
+  *Caveat:* removing a regime also removes ~half the observations, so the drop blends genuine
+  regime-dependence with a shorter-track-record effect — directionally right, not a clean split.
 
+Suite: **19 passing.** noise→RED / real→GREEN invariant intact.
+
+## Queued
+
+- **Sample-size-controlled regime test.** The ex-regime DSR drop conflates regime-dependence
+  with reduced `n` (removing a regime drops ~half the months). A per-period-Sharpe delta or a
+  bootstrap that holds `n` fixed would isolate the pure regime effect from the track-record effect.
 - **Daily vs monthly deflation.** Fixtures are monthly (compounded) for size + macro-regime
   alignment. Switch to daily if you want the allocator's native cadence.
-- **Make the regime test bite on real data.** The allocator is broad multi-asset (regime-robust
-  by design), so Task 2 shows ~no collapse. Point it at a regime-dependent sleeve (e.g. a
-  momentum book) to exercise a genuine DSR collapse on real data.
 
 ## Parked / later
 
