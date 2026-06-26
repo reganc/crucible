@@ -73,7 +73,16 @@ the live picture. **Read it before starting new work; update it when work lands.
   Sharpe is built to penalise — so **daily is the honest cadence for a real assessment**; monthly
   is kept for small/fast hermetic tests (and here doesn't change the call).
 
-Suite: **21 passing.** noise→RED / real→GREEN invariant intact.
+- **Capacity / transaction-cost layer** — `crucible/capacity.py` (a pre-verdict seam; never
+  touches the DSR/PBO math). Haircuts gross returns for linear cost + square-root market impact
+  (`CostModel`, `net_returns`, `net_sharpe`) and solves the **capacity** — the AUM where net
+  Sharpe hits zero (`capacity_aum`, by bisection). Costs only ever subtract (no flattering).
+  `tests/test_capacity.py` (8 cases: identity, monotonicity, sqrt-law, break-even, unbounded /
+  zero edge cases) + `examples/capacity_curve.py`. On the real allocator edge: zero-cost
+  GREEN / DSR 0.999 survives deflation, but at **$10B AUM** market impact takes net Sharpe to
+  −0.02 and the Deflated Sharpe to **0.125 → RED** — a real edge that's untradeable at scale.
+
+Suite: **29 passing.** noise→RED / real→GREEN invariant intact.
 
 ## Queued
 
@@ -81,7 +90,6 @@ _Nothing queued — next candidates are under Parked / later._
 
 ## Parked / later
 
-- Optional capacity / transaction-cost realism layer before the verdict (from CLAUDE.md "Next").
 - `trading-api` market regime brain (BULL…BEAR) as an alternative classifier if a market-state
   (not macro-economic) lens is wanted — needs live DB/Redis/Yahoo, so not offline-reproducible.
 - Hygiene: the FRED key in `~/apps/Schwab/research-api/.env` was exposed in a prior session's

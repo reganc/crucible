@@ -20,6 +20,9 @@ adapter ships for a **systematic ETF allocator** — see [Allocator integration]
 - **Regime-conditional Deflated Sharpe** — recomputes the DSR with the dominant regime's
   observations removed and surfaces the drop, answering "does the edge survive when you
   remove the regime it was born in?" Catches edges that live in one regime only.
+- **Capacity & transaction costs** — haircuts returns for cost + square-root market impact and
+  finds the *capacity*: the AUM beyond which your own market impact eats the edge. A backtest can
+  survive deflation yet be untradeable at scale.
 
 ## Quickstart
 
@@ -83,4 +86,6 @@ honest as the trial set.
   (`pip install crucible[cpcv]`); the package still runs without it.
 - `crucible/regime.py` — regime seam: `SingleRegime` (no-dependency fallback) and
   `PrecomputedRegime` (carries date-aligned labels from the allocator's macro six-regime classifier).
+- `crucible/capacity.py` — pre-verdict seam: cost + square-root market-impact haircut and the
+  capacity solve. Built here; never touches the DSR/PBO math.
 - `crucible/verdict.py` — the orchestration: the actual product.

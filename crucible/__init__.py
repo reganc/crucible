@@ -5,6 +5,7 @@ from crucible.psr import (
     min_track_record_length,
     probabilistic_sharpe_ratio,
 )
+from crucible.capacity import CostModel, capacity_aum, net_returns, net_sharpe
 from crucible.pbo import pbo_cscv
 from crucible.regime import PrecomputedRegime, SingleRegime, dominant_regime
 from crucible.verdict import RegimeDeflation, Verdict, assess
@@ -13,5 +14,6 @@ __all__ = [
     "deflated_sharpe_ratio", "probabilistic_sharpe_ratio", "min_track_record_length",
     "expected_max_sharpe", "pbo_cscv", "assess", "Verdict", "RegimeDeflation",
     "PrecomputedRegime", "SingleRegime", "dominant_regime",
+    "CostModel", "capacity_aum", "net_returns", "net_sharpe",
 ]
 __version__ = "0.0.1"

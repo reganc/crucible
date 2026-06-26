@@ -118,6 +118,8 @@ don't proceed.**
 - `crucible/pbo.py` — Probability of Backtest Overfitting via CSCV (verified stats).
 - `crucible/regime.py` — seam: the `RegimeClassifier` Protocol + `SingleRegime` fallback.
 - `crucible/ingest.py` — seam: adapters from external formats to the generic shapes.
+- `crucible/capacity.py` — pre-verdict seam: haircuts returns for cost + square-root market
+  impact and solves the capacity (AUM where the edge dies). Never touches the core math.
 - `crucible/metrics.py` — per-period Sharpe and higher moments the deflation math consumes.
 - `KICKOFF.md` — the active handoff and task sequence; read it before starting queued work.
 
