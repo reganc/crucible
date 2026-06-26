@@ -7,7 +7,7 @@ N noisy tries. The job of this tool is sometimes to disappoint you.
 It is engine- and data-agnostic on purpose: it consumes a matrix of trial returns or a
 single strategy's return series, not a specific platform's internals. It sits *on top of*
 your backtester (LEAN / Nautilus / VectorBT / a CSV), not in competition with it. A concrete
-adapter ships for the **Schwab systematic ETF allocator** — see [Schwab integration](#schwab-integration).
+adapter ships for a **systematic ETF allocator** — see [Allocator integration](#allocator-integration).
 
 ## What it computes
 
@@ -42,11 +42,11 @@ v = assess(chosen_returns, n_trials=200, trials_matrix=M)  # M is (T x N)
 print(v.band, v.headline, v.deflation.deflated_sharpe, v.pbo.pbo)
 ```
 
-## Schwab integration
+## Allocator integration
 
-A concrete adapter wires CRUCIBLE to the Schwab systematic ETF allocator. The allocator's
-schema stays inside `crucible/ingest.py`; the verdict only ever sees a generic trial matrix
-and a 1-D return series.
+A concrete adapter wires CRUCIBLE to a systematic ETF allocator. The allocator's schema stays
+inside `crucible/ingest.py`; the verdict only ever sees a generic trial matrix and a 1-D
+return series. (The adapter functions and fixtures keep their `…_schwab…` names in code.)
 
 ```python
 from crucible import assess
@@ -82,5 +82,5 @@ honest as the trial set.
 - `crucible/cpcv.py` — thin seam over **skfolio**'s `CombinatorialPurgedCV`
   (`pip install crucible[cpcv]`); the package still runs without it.
 - `crucible/regime.py` — regime seam: `SingleRegime` (no-dependency fallback) and
-  `PrecomputedRegime` (carries date-aligned labels from the Schwab macro six-regime classifier).
+  `PrecomputedRegime` (carries date-aligned labels from the allocator's macro six-regime classifier).
 - `crucible/verdict.py` — the orchestration: the actual product.
