@@ -12,16 +12,25 @@ over the cross of:
   - sleeve mandate (`sleeve_caps`): how much each asset-class sleeve may hold —
     balanced / equity-tilt / defensive / all-weather / real-assets / credit-tilt,
   - trend horizon (`lookbacks`): fast / medium / slow time-series momentum,
-and writes a wide CSV of per-period (monthly) net returns: one column per strategy
-plus the registered-primary `chosen` column (balanced mandate, medium horizon —
-matching `allocator.scripts.run_backtest`).
+and writes a wide CSV of per-period net returns: one column per strategy plus the
+registered-primary `chosen` column (balanced mandate, medium horizon — matching
+`allocator.scripts.run_backtest`).
+
+Cadence (`CRUCIBLE_CADENCE`, default `monthly`): the committed fixture is monthly
+(compounded) — small and aligned to the monthly macro-regime labels. For a REAL
+assessment prefer `daily` (native): compounding to monthly Gaussianises the returns
+(CLT) and hides the skew/kurtosis the Deflated Sharpe is built to penalise. For this
+allocator the verdict is the same either way (see examples/compare_cadence.py); monthly
+can flatter a more crash-prone strategy. Daily writes to allocator_export_daily.csv so
+the committed monthly fixture is never clobbered.
 
 DEV TOOL, not part of the `crucible` package: it imports the allocator. The committed
 artifact (`tests/fixtures/allocator_export.csv`) is generic CSV with no allocator
 dependency, so the test suite stays hermetic.
 
     ALLOCATOR_SRC=/home/regan/apps/Schwab/allocator \
-        python examples/gen_allocator_trials.py
+        python examples/gen_allocator_trials.py             # monthly (default)
+    CRUCIBLE_CADENCE=daily python examples/gen_allocator_trials.py   # native daily
 """
 from __future__ import annotations
 
@@ -40,7 +49,9 @@ from allocator.config import settings  # noqa: E402
 from allocator.data.store import load_panel  # noqa: E402
 from allocator.universe import Sleeve, all_tickers, by_ticker  # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "allocator_export.csv"
+CADENCE = os.environ.get("CRUCIBLE_CADENCE", "monthly")   # "monthly" (compounded) | "daily" (native)
+_FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
+OUT = _FIXTURES / ("allocator_export.csv" if CADENCE == "monthly" else "allocator_export_daily.csv")
 
 # ── Sleeve mandates: max weight per asset-class sleeve (cash absorbs the residual,
 # so CASH stays 1.0). Each is a genuinely different strategic book. "balanced" is the
@@ -72,10 +83,15 @@ TREND_HORIZONS: dict[str, tuple[int, ...]] = {
 PRIMARY = ("balanced", "medium")   # the chosen / registered strategy
 
 
-def _monthly(net: pd.Series) -> pd.Series:
-    """Compound daily net returns to month-end per-period returns (smaller fixture,
-    and aligns with the macro regime classifier's monthly cadence for Task 2)."""
-    return (1.0 + net).resample("ME").prod() - 1.0
+def _to_cadence(net: pd.Series) -> pd.Series:
+    """Resample daily net returns to the chosen deflation cadence. Monthly compounding
+    yields a small, regime-aligned fixture; daily is the native, non-normality-preserving
+    cadence (preferred for a real assessment)."""
+    if CADENCE == "daily":
+        return net
+    if CADENCE == "monthly":
+        return (1.0 + net).resample("ME").prod() - 1.0
+    raise SystemExit(f"CRUCIBLE_CADENCE must be 'monthly' or 'daily', got {CADENCE!r}")
 
 
 def main() -> int:
@@ -88,25 +104,25 @@ def main() -> int:
         cfg = BacktestConfig(start=settings.backtest_start, lookbacks=TREND_HORIZONS[horizon])
         res = run_backtest(prices, universe, SLEEVE_SCHEMES[scheme], cfg)
         key = f"trial_{i:02d}"
-        columns[key] = _monthly(res.net_returns)
+        columns[key] = _to_cadence(res.net_returns)
         if (scheme, horizon) == PRIMARY:
             primary_key = key
         s = columns[key]
         sharpe = s.mean() / s.std() if s.std() else float("nan")
-        print(f"  {key}: {scheme:<11} {horizon:<6} -> {len(s):>3} months, "
+        print(f"  {key}: {scheme:<11} {horizon:<6} -> {len(s):>5} {CADENCE} obs, "
               f"per-period sharpe {sharpe:+.3f}")
 
     if primary_key is None:
         raise SystemExit("primary strategy not present in the variant grid")
 
-    df = pd.DataFrame(columns).dropna()          # align to the common monthly window
+    df = pd.DataFrame(columns).dropna()          # align to the common window
     df.insert(0, "chosen", df[primary_key])      # chosen = registered primary
     df.index.name = "date"
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT)
     print(f"\nwrote {OUT}")
-    print(f"  {df.shape[0]} months x {len(columns)} strategies  "
+    print(f"  {df.shape[0]} {CADENCE} obs x {len(columns)} strategies  "
           f"({df.index.min().date()} -> {df.index.max().date()}, chosen={primary_key} "
           f"= {PRIMARY[0]}/{PRIMARY[1]})")
     return 0

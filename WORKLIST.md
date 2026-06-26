@@ -63,12 +63,21 @@ the live picture. **Read it before starting new work; update it when work lands.
   0.999 → 0.968 sits at the **19th** percentile → sample-size, correctly NOT flagged.
   `tests/test_regime.py` gains a sample-size-artifact case + a determinism check.
 
+- **Daily vs monthly deflation — resolved** — added a `CRUCIBLE_CADENCE` knob to
+  `examples/gen_allocator_trials.py` (monthly default → the small committed fixture; `daily` →
+  native, written to a separate file so the committed fixture is never clobbered) and
+  `examples/compare_cadence.py`. **Finding:** the verdict is cadence-robust for this allocator —
+  both GREEN, DSR 0.999, PBO 0.11 (monthly) / 0.08 (daily), minTRL agrees in time (~3.5 yr). The
+  real difference is non-normality: daily skew **−0.51** / kurtosis **6.28** vs monthly +0.01 /
+  3.87. Monthly compounding Gaussianises the returns (CLT) and hides the tail risk the Deflated
+  Sharpe is built to penalise — so **daily is the honest cadence for a real assessment**; monthly
+  is kept for small/fast hermetic tests (and here doesn't change the call).
+
 Suite: **21 passing.** noise→RED / real→GREEN invariant intact.
 
 ## Queued
 
-- **Daily vs monthly deflation.** Fixtures are monthly (compounded) for size + macro-regime
-  alignment. Switch to daily if you want the allocator's native cadence.
+_Nothing queued — next candidates are under Parked / later._
 
 ## Parked / later
 

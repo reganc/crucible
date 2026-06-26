@@ -152,7 +152,11 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
   18 in all — *not* knob perturbations of one book (that made PBO measure tie-break noise; see
   the trial-set note in WORKLIST.md). The chosen is the registered primary (balanced / medium).
   `examples/gen_allocator_trials.py` drives this offline over the cached price panel and writes the
-  committed fixture `tests/fixtures/allocator_export.csv`.
+  committed fixture `tests/fixtures/allocator_export.csv`. The fixture is monthly (compounded) for
+  size + macro-regime alignment; pass `CRUCIBLE_CADENCE=daily` for the native cadence. Daily
+  preserves the skew/kurtosis the DSR penalises (monthly compounding Gaussianises and can flatter),
+  so prefer it for a real assessment — though here the verdict is cadence-robust
+  (`examples/compare_cadence.py`).
 - **Regime classifier (Task 2):** `Schwab/research-api/research/analysers/regime_classifier.py`
   — the **macro six-regime** classifier (GOLDILOCKS / REFLATION / STAGFLATION / DISINFLATION /
   LATE_CYCLE / RECESSION). Chosen over `trading-api/portfolio/regime_brain.py` because it is
