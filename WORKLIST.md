@@ -14,10 +14,9 @@ the live picture. **Read it before starting new work; update it when work lands.
   allocator backtest = the export; research-api macro **six-regime** classifier = the regime
   brain; regime labels **date-aligned** to returns. (Details in CLAUDE.md → Integration source.)
 - **Task 1 — Schwab ingestion adapter** (`823cb49`) — `ingest.load_schwab` → (T×N matrix,
-  chosen series); real fixture `tests/fixtures/schwab_export.csv` (27 allocator variants,
-  257 months, 2005–2026) via `examples/gen_schwab_trials.py`; `tests/test_ingest_schwab.py`.
-  Verdict is RED via **PBO 0.76 while DSR 1.0** — config-selection is overfit, base edge
-  survives deflation.
+  chosen series); real fixture `tests/fixtures/schwab_export.csv` via
+  `examples/gen_schwab_trials.py`; `tests/test_ingest_schwab.py`. (Fixture later rebuilt — see
+  the trial-set entry below.)
 - **Task 2 — Regime-conditional deflation** (`b1aa769`) — `regime.PrecomputedRegime` +
   `verdict.RegimeDeflation` (DSR_full vs DSR_ex_dominant_regime, regime-captive note at
   drop ≥ 0.5); `ingest.schwab_regime_classifier` wraps the macro six-regime output. Real
@@ -25,14 +24,24 @@ the live picture. **Read it before starting new work; update it when work lands.
   `tests/test_regime.py` + `tests/test_ingest_schwab_regime.py`. On the real allocator the edge
   is **not** regime-captive: dominant regime DISINFLATION, DSR 1.000 → 0.990.
 
+- **Trial set = structurally distinct strategies** — `examples/gen_schwab_trials.py` now sweeps
+  6 sleeve mandates (balanced / equity-tilt / defensive / all-weather / real-assets / credit-tilt)
+  × 3 trend horizons (fast / medium / slow) = **18 strategies**, 258 months. Chosen = the
+  registered primary (balanced / medium), which is mid-pack (defensive beats it in-sample, so
+  PBO isn't gamed by picking the winner).
+  **Finding — the verdict is trial-set-dependent, and that is the real lesson:**
+  - 27 knob perturbations → near-identical returns → **PBO 0.76 → RED** (you can't reliably pick
+    the best *knob setting*; selecting among indistinguishable books is overfitting).
+  - 18 distinct strategies → dispersed returns → **PBO 0.11, DSR 0.999 → GREEN** (selecting among
+    genuinely different *strategies* holds up out of sample). Still not regime-captive
+    (DSR 0.999 → 0.968 ex-DISINFLATION).
+  PBO is only as meaningful as the trial set faithfully represents the search you actually ran.
+  Honest read on the allocator: don't trust knob-tuning, but the chosen mandate is defensible.
+
 Suite: **17 passing.** noise→RED / real→GREEN invariant intact.
 
 ## Queued — open questions raised at task checkpoints (need a call before building)
 
-- **Define "the variants you tried" for Schwab.** The 27 trials are knob perturbations
-  (vol_window × no-trade band × rebalance) → tightly clustered Sharpes → PBO reads
-  *config selection* as overfit. For PBO to speak to competing **strategies**, the sweep should
-  include structurally different variants (signal families, sleeve schemes), not just knobs.
 - **Daily vs monthly deflation.** Fixtures are monthly (compounded) for size + macro-regime
   alignment. Switch to daily if you want the allocator's native cadence.
 - **Make the regime test bite on real data.** The allocator is broad multi-asset (regime-robust

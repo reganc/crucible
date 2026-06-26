@@ -146,10 +146,13 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
 **`~/apps/Schwab/`** (a systematic multi-asset ETF allocator) instead:
 
 - **Backtest export (Task 1):** `Schwab/allocator/allocator/backtest/engine.py::run_backtest`
-  → `BacktestResult.net_returns` (date-indexed per-period returns). A sweep of N
-  `BacktestConfig` variants is the multiple-testing set. `examples/gen_schwab_trials.py`
-  drives this offline over the cached price panel and writes the committed fixture
-  `tests/fixtures/schwab_export.csv`.
+  → `BacktestResult.net_returns` (date-indexed per-period returns). The multiple-testing set is
+  a sweep of **structurally distinct strategies** — sleeve mandate (balanced / equity-tilt /
+  defensive / all-weather / real-assets / credit-tilt) × trend horizon (fast / medium / slow),
+  18 in all — *not* knob perturbations of one book (that made PBO measure tie-break noise; see
+  the trial-set note in WORKLIST.md). The chosen is the registered primary (balanced / medium).
+  `examples/gen_schwab_trials.py` drives this offline over the cached price panel and writes the
+  committed fixture `tests/fixtures/schwab_export.csv`.
 - **Regime classifier (Task 2):** `Schwab/research-api/research/analysers/regime_classifier.py`
   — the **macro six-regime** classifier (GOLDILOCKS / REFLATION / STAGFLATION / DISINFLATION /
   LATE_CYCLE / RECESSION). Chosen over `trading-api/portfolio/regime_brain.py` because it is
@@ -162,9 +165,10 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
 
 Tactical status — what's done, in flight, queued, and parked — lives in **`WORKLIST.md`**.
 Read it before starting new work; update it when work lands. CLAUDE.md is stable conventions
-and load-bearing decisions; WORKLIST.md is the moving picture. (Tasks 1 and 2 are landed — the
-band on the real Schwab fixture is RED via PBO while DSR = 1.0; that divergence is the honest
-signal, not a bug to "fix.")
+and load-bearing decisions; WORKLIST.md is the moving picture. (Tasks 1 and 2 are landed. The
+band on the real Schwab fixture is **trial-set-dependent**: 18 diverse strategies → GREEN
+(PBO 0.11, DSR 0.999); the earlier knob-only sweep → RED (PBO 0.76). Both are honest answers to
+different questions — that sensitivity is the point, not a bug to "fix.")
 
 > **Regenerating the fixtures** (one-off; not crucible runtime deps):
 > - Returns export (`tests/fixtures/schwab_export.csv`): `examples/gen_schwab_trials.py` — needs
