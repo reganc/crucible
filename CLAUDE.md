@@ -158,22 +158,13 @@ regime classifier and no (T×N) return matrix — wrong source. CRUCIBLE integra
   DB/Redis/Yahoo. Labels are **date-aligned** to the chosen returns (neither classifier consumes
   a raw returns array).
 
-## Status
+## Worklist
 
-- **Task 1 — Schwab ingestion adapter: DONE.** `ingest.load_schwab(path)` → `(trials_matrix,
-  chosen_returns)`; real committed fixture (27 allocator variants, 2005–2026, monthly);
-  `tests/test_ingest_schwab.py` asserts a well-formed verdict end to end. On this fixture the
-  verdict is RED — driven by **PBO ≈ 0.76 while DSR = 1.0**: the base edge survives deflation,
-  but the 27 near-identical configs are out-of-sample-indistinguishable, so *config selection*
-  is overfit. Do not "fix" the band; that divergence is the honest signal.
-- **Task 2 — Regime-conditional verdict: DONE.** `regime.PrecomputedRegime` carries
-  date-aligned labels; `ingest.schwab_regime_classifier(export, regime_csv)` wraps the macro
-  six-regime classifier (maps the enum → ints, joins by month). `assess(regime=…)` reports
-  `RegimeDeflation` (DSR_full vs DSR_ex_dominant_regime) and notes a *regime-captive* edge when
-  the drop ≥ 0.5. On the real allocator + real FRED labels, the edge is **not** captive:
-  dominant regime DISINFLATION, DSR 1.000 → 0.990 (Δ0.01). So RED is purely config-overfit
-  (PBO); the underlying edge survives both deflation and regime removal. `tests/test_regime.py`
-  (synthetic captive/robust cases) + `tests/test_ingest_schwab_regime.py` (real fixtures).
+Tactical status — what's done, in flight, queued, and parked — lives in **`WORKLIST.md`**.
+Read it before starting new work; update it when work lands. CLAUDE.md is stable conventions
+and load-bearing decisions; WORKLIST.md is the moving picture. (Tasks 1 and 2 are landed — the
+band on the real Schwab fixture is RED via PBO while DSR = 1.0; that divergence is the honest
+signal, not a bug to "fix.")
 
 > **Regenerating the fixtures** (one-off; not crucible runtime deps):
 > - Returns export (`tests/fixtures/schwab_export.csv`): `examples/gen_schwab_trials.py` — needs
